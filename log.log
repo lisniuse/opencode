@@ -1,0 +1,30 @@
+[OpenCode] customElements supported
+index-BCTAi_PU.js:2451 [OpenCode] diffs-container defined: true
+index-BCTAi_PU.js:2451 [OpenCode] CSSStyleSheet supported
+index-BCTAi_PU.js:2451 [OpenCode] About to load diff library...
+index.html:1 A preload for 'file:///android_asset/www/assets/inter-FIwubZjA.woff2' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+index.html:1 Failed to decode downloaded font: data:font/woff2;base64,QmxleE1vbm9OZXJkRm9udE1vbm8tUmVndWxhci53b2ZmMg==
+index.html:1 OTS parsing error: invalid sfntVersion: 1114400120
+index-BCTAi_PU.js:2451 [OpenCode] diff library loaded: Array(29)
+index-BCTAi_PU.js:2451 [OpenCode] createTwoFilesPatch: function
+index-BCTAi_PU.js:2451 [OpenCode] window.diff set: true
+index.html#/RDpcZGV2XGdpdGh1YlxvcGVuY29kZQ/session/ses_341680335ffe50Wozed4HsuCqA:1 Failed to decode downloaded font: data:font/woff2;base64,QmxleE1vbm9OZXJkRm9udE1vbm8tTWVkaXVtLndvZmYy
+index.html#/RDpcZGV2XGdpdGh1YlxvcGVuY29kZQ/session/ses_341680335ffe50Wozed4HsuCqA:1 OTS parsing error: invalid sfntVersion: 1114400120
+index.html#/RDpcZGV2XGdpdGh1YlxvcGVuY29kZQ/session/ses_341680335ffe50Wozed4HsuCqA:1 The resource file:///android_asset/www/assets/inter-FIwubZjA.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+index-BCTAi_PU.js:1972 [isWebView] check: Object
+index-BCTAi_PU.js:1972 [File] Using SimpleDiffViewer for WebView environment
+index-BCTAi_PU.js:1944 [SimpleDiffViewer] Using window.diff
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Rendered 3 lines
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Cleaned up
+index-BCTAi_PU.js:1972 [isWebView] check: Object
+index-BCTAi_PU.js:1972 [File] Using SimpleDiffViewer for WebView environment
+index-BCTAi_PU.js:1944 [SimpleDiffViewer] Using window.diff
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Rendered 3 lines
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Cleaned up
+index-BCTAi_PU.js:1972 [isWebView] check: Object
+index-BCTAi_PU.js:1972 [File] Using SimpleDiffViewer for WebView environment
+index-BCTAi_PU.js:1944 [SimpleDiffViewer] Using window.diff
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Rendered 6 lines
+index-BCTAi_PU.js:1969 [SimpleDiffViewer] Cleaned up
+index.html#/RDpcZGV2XGdpdGh1YlxvcGVuY29kZQ/session/ses_341680335ffe50Wozed4HsuCqA:1 The resource file:///android_asset/www/assets/inter-FIwubZjA.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+index.html#/RDpcZGV2XGdpdGh1YlxvcGVuY29kZQ/session/ses_341680335ffe50Wozed4HsuCqA:1 The resource file:///android_asset/www/assets/inter-FIwubZjA.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.

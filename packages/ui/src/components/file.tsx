@@ -44,6 +44,7 @@ import { acquireVirtualizer, virtualMetrics } from "../pierre/virtualizer"
 import { getWorkerPool } from "../pierre/worker"
 import { FileMedia, type FileMediaOptions } from "./file-media"
 import { FileSearchBar } from "./file-search"
+import { getSharedHighlighter } from "@pierre/diffs"
 
 const VIRTUALIZE_BYTES = 500_000
 
@@ -1164,12 +1165,221 @@ function DiffViewer<T>(props: DiffFileProps<T>) {
 }
 
 // ---------------------------------------------------------------------------
+// SimpleDiffViewer - Inline implementation for WebView environments
+// This is inlined here to ensure it's included in the build
+// ---------------------------------------------------------------------------
+
+interface SimpleDiffViewerProps {
+  before: { name: string; contents: string }
+  after: { name: string; contents: string }
+  diffStyle?: "split" | "unified"
+}
+
+interface LineInfo {
+  text: string
+  oldLineNum: number | null
+  newLineNum: number | null
+  type: "added" | "removed" | "unchanged"
+}
+
+function SimpleDiffViewer(props: SimpleDiffViewerProps) {
+  let containerRef: HTMLDivElement | undefined
+  const [diffModule, setDiffModule] = createSignal<any>(null)
+  const [highlighter, setHighlighter] = createSignal<any>(null)
+
+  onMount(() => {
+    getSharedHighlighter({
+      themes: ["dark-plus"],
+      langs: ["typescript", "javascript", "tsx", "jsx", "json", "html", "css", "python", "rust", "go", "java", "c", "cpp", "markdown", "yaml", "bash", "text"],
+      preferredHighlighter: "shiki-js"
+    }).then((h) => setHighlighter(h)).catch(() => {})
+
+    const checkDiff = () => {
+      const diff = (window as any).diff
+      if (diff) setDiffModule(diff)
+      else setTimeout(checkDiff, 100)
+    }
+    checkDiff()
+  })
+
+  const lines = createMemo<LineInfo[]>(() => {
+    const mod = diffModule()
+    if (!mod) return []
+
+    const before = props.before.contents || ""
+    const after = props.after.contents || ""
+
+    try {
+      const changes = mod.diffLines(before, after)
+      const result: LineInfo[] = []
+      let oldLineNum = 1
+      let newLineNum = 1
+
+      changes.forEach((change: any) => {
+        const changeLines = change.value.split("\n")
+        if (changeLines[changeLines.length - 1] === "") changeLines.pop()
+
+        changeLines.forEach((lineText: string) => {
+          if (change.added) {
+            result.push({ text: lineText, oldLineNum: null, newLineNum: newLineNum++, type: "added" })
+          } else if (change.removed) {
+            result.push({ text: lineText, oldLineNum: oldLineNum++, newLineNum: null, type: "removed" })
+          } else {
+            result.push({ text: lineText, oldLineNum: oldLineNum++, newLineNum: newLineNum++, type: "unchanged" })
+          }
+        })
+      })
+
+      return result
+    } catch (e) {
+      return []
+    }
+  })
+
+  const escapeHtml = (text: string): string => {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  }
+
+  const getLanguageFromFilename = (filename: string): string => {
+    const ext = filename.split(".").pop()?.toLowerCase() || ""
+    const langMap: Record<string, string> = {
+      ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx", py: "python",
+      rs: "rust", go: "go", java: "java", cpp: "cpp", c: "c", h: "c", hpp: "cpp",
+      css: "css", scss: "scss", less: "less", html: "html", xml: "xml", json: "json",
+      md: "markdown", yaml: "yaml", yml: "yaml", sql: "sql", sh: "bash", bash: "bash",
+      zsh: "bash", vue: "vue", svelte: "svelte", php: "php", rb: "ruby", swift: "swift",
+      kt: "kotlin", scala: "scala", r: "r", dart: "dart", lua: "lua"
+    }
+    return langMap[ext] || "text"
+  }
+
+  const highlightCode = async (code: string, lang: string): Promise<string> => {
+    const h = highlighter()
+    if (!h) return escapeHtml(code)
+    try {
+      const result = await h.codeToHtml(code, { lang: lang || "text", theme: "dark-plus" })
+      const match = result.match(/<code[^>]*>([\s\S]*)<\/code>/)
+      return match ? match[1] : escapeHtml(code)
+    } catch (e) {
+      return escapeHtml(code)
+    }
+  }
+
+  const renderDiff = async () => {
+    if (!containerRef) return
+    const diffLines = lines()
+    if (diffLines.length === 0) {
+      containerRef.innerHTML = "<div style='padding: 20px; color: #666;'>Loading diff...</div>"
+      return
+    }
+
+    containerRef.innerHTML = ""
+    const diffContainer = document.createElement("div")
+    diffContainer.className = "simple-diff"
+    diffContainer.style.cssText = `font-family: var(--font-family-mono, monospace); font-size: var(--font-size-small, 13px); line-height: 1.5; overflow-x: auto; background: var(--color-bg, #1e1e1e); color: var(--color-fg, #d4d4d4);`
+
+    const lang = getLanguageFromFilename(props.after.name || props.before.name || "")
+
+    for (let i = 0; i < diffLines.length; i++) {
+      const line = diffLines[i]
+      const lineEl = document.createElement("div")
+      lineEl.className = "diff-line"
+      lineEl.style.cssText = `display: flex; min-height: 24px; font-family: inherit;`
+
+      const oldNumEl = document.createElement("span")
+      oldNumEl.className = "old-line-num"
+      oldNumEl.style.cssText = `width: 45px; padding: 0 8px; text-align: right; color: #666; user-select: none; flex-shrink: 0; font-family: inherit; border-right: 1px solid #333;`
+      oldNumEl.textContent = line.oldLineNum?.toString() || ""
+
+      const newNumEl = document.createElement("span")
+      newNumEl.className = "new-line-num"
+      newNumEl.style.cssText = `width: 45px; padding: 0 8px; text-align: right; color: #666; user-select: none; flex-shrink: 0; font-family: inherit; border-right: 1px solid #333;`
+      newNumEl.textContent = line.newLineNum?.toString() || ""
+
+      const indicatorEl = document.createElement("span")
+      indicatorEl.className = "change-indicator"
+      indicatorEl.style.cssText = `width: 20px; padding: 0 4px; text-align: center; user-select: none; flex-shrink: 0; font-family: inherit;`
+
+      const contentEl = document.createElement("span")
+      contentEl.className = "line-content"
+      contentEl.style.cssText = `flex: 1; padding: 0 8px; white-space: pre; font-family: inherit;`
+
+      if (line.type === "added") {
+        lineEl.style.backgroundColor = "rgba(35, 197, 94, 0.1)"
+        indicatorEl.textContent = "+"
+        indicatorEl.style.color = "#23c55e"
+        oldNumEl.style.backgroundColor = "rgba(35, 197, 94, 0.05)"
+        newNumEl.style.backgroundColor = "rgba(35, 197, 94, 0.05)"
+      } else if (line.type === "removed") {
+        lineEl.style.backgroundColor = "rgba(239, 68, 68, 0.1)"
+        indicatorEl.textContent = "-"
+        indicatorEl.style.color = "#ef4444"
+        oldNumEl.style.backgroundColor = "rgba(239, 68, 68, 0.05)"
+        newNumEl.style.backgroundColor = "rgba(239, 68, 68, 0.05)"
+      } else {
+        indicatorEl.textContent = " "
+      }
+
+      const highlighted = await highlightCode(line.text, lang)
+      contentEl.innerHTML = highlighted || " "
+
+      lineEl.appendChild(oldNumEl)
+      lineEl.appendChild(newNumEl)
+      lineEl.appendChild(indicatorEl)
+      lineEl.appendChild(contentEl)
+      diffContainer.appendChild(lineEl)
+    }
+
+    containerRef.appendChild(diffContainer)
+  }
+
+  createEffect(() => {
+    lines()
+    highlighter()
+    renderDiff()
+  })
+
+  return (
+    <div
+      ref={containerRef}
+      class="simple-diff-viewer"
+      style={{ width: "100%", height: "100%", overflow: "auto", "background-color": "var(--color-bg, #1e1e1e)", color: "var(--color-fg, #d4d4d4)" }}
+    >
+      <div style={{ padding: "20px", color: "#666" }}>Loading diff...</div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+// Check if running in WebView/Cordova environment
+const isWebView = () => {
+  if (typeof window === "undefined") return false
+  const protocol = window.location.protocol
+  const hasCordova = !!(window as any).cordova
+  const hasWebkit = !!(window as any).webkit?.messageHandlers
+  const result = protocol === "file:" || hasCordova || hasWebkit
+  console.log("[isWebView] check:", { protocol, hasCordova, hasWebkit, result })
+  return result
+}
 
 export function File<T>(props: FileProps<T>) {
   if (props.mode === "text") {
     return <FileMedia media={props.media} fallback={() => TextViewer(props)} />
+  }
+
+  // Use SimpleDiffViewer in WebView environment to avoid Shadow DOM issues
+  if (isWebView()) {
+    console.log("[File] Using SimpleDiffViewer for WebView environment")
+    return (
+      <SimpleDiffViewer
+        before={props.before}
+        after={props.after}
+        diffStyle={props.diffStyle}
+      />
+    )
   }
 
   return <FileMedia media={props.media} fallback={() => DiffViewer(props)} />

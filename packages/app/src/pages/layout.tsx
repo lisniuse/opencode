@@ -2034,8 +2034,18 @@ export default function Layout(props: ParentProps) {
     )
   }
 
+  // 检测是否为移动端 WebView（Cordova/Android）
+  const isMobileWebView = createMemo(() => {
+    const p = platform.platform
+    return p === 'web' && /android|iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())
+  })
+
   return (
     <div class="relative bg-background-base flex-1 min-h-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text">
+      {/* 灵动岛/刘海屏占位 - 在移动端延伸到状态栏区域 */}
+      <Show when={isMobileWebView()}>
+        <div class="h-16 bg-background-base shrink-0" />
+      </Show>
       <Titlebar />
       <div class="flex-1 min-h-0 flex">
         <nav

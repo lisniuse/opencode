@@ -9,8 +9,25 @@ export default defineConfig({
     port: 3000,
   },
   build: {
-    target: "esnext",
+    target: ["chrome89", "edge89", "firefox78", "safari14"],
     // sourcemap: true,
+    rollupOptions: {
+      external: [],
+    },
+  },
+  optimizeDeps: {
+    include: ["diff", "@pierre/diffs"],
   },
   base: "./",
+  css: {
+    transformer: "lightningcss",
+    lightningcss: {
+      targets: {
+        chrome: 89,
+        edge: 89,
+        firefox: 78,
+        safari: 14,
+      },
+    },
+  },
 })

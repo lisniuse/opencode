@@ -11,7 +11,49 @@ import { handleNotificationClick } from "@/utils/notification-click"
 import pkg from "../package.json"
 import { ServerConnection } from "./context/server"
 
+// Import web-components to register <diffs-container> custom element
+import "@opencode-ai/ui/pierre/web-components"
+
+// Debug: Check if custom elements are supported
+if (typeof customElements !== "undefined") {
+  console.log("[OpenCode] customElements supported")
+  console.log("[OpenCode] diffs-container defined:", customElements.get("diffs-container") !== undefined)
+} else {
+  console.error("[OpenCode] customElements NOT supported")
+}
+
+// Debug: Check CSSStyleSheet support
+if (typeof CSSStyleSheet !== "undefined") {
+  console.log("[OpenCode] CSSStyleSheet supported")
+} else {
+  console.error("[OpenCode] CSSStyleSheet NOT supported")
+}
+
+// Debug: Check diff library availability and expose to window
+console.log("[OpenCode] About to load diff library...")
+import("diff").then((diff) => {
+  console.log("[OpenCode] diff library loaded:", Object.keys(diff))
+  console.log("[OpenCode] createTwoFilesPatch:", typeof diff.createTwoFilesPatch)
+  // Expose diff to window for SimpleDiffViewer
+  ;(window as any).diff = diff
+  console.log("[OpenCode] window.diff set:", !!(window as any).diff)
+}).catch((err) => {
+  console.error("[OpenCode] Failed to load diff library:", err)
+})
+
+// Preload highlighter for SimpleDiffViewer
+console.log("[OpenCode] About to load highlighter...")
+import("@opencode-ai/ui/pierre").then((mod) => {
+  console.log("[OpenCode] @opencode-ai/ui/pierre module loaded")
+  // The highlighter will be loaded by SimpleDiffViewer when needed
+}).catch((err) => {
+  console.error("[OpenCode] Failed to load pierre module:", err)
+})
+
 const DEFAULT_SERVER_URL_KEY = "opencode.settings.dat:defaultServerUrl"
+
+// In-memory fallback for file:// protocol where localStorage doesn't work
+let memoryServerUrl: string | null = null
 
 const getLocale = () => {
   if (typeof navigator !== "object") return "en" as const
@@ -51,8 +93,22 @@ const setStorage = (key: string, value: string | null) => {
   }
 }
 
-const readDefaultServerUrl = () => getStorage(DEFAULT_SERVER_URL_KEY)
-const writeDefaultServerUrl = (url: string | null) => setStorage(DEFAULT_SERVER_URL_KEY, url)
+const readDefaultServerUrl = () => {
+  // For file:// protocol, use in-memory storage
+  if (location.protocol === "file:") {
+    return memoryServerUrl
+  }
+  return getStorage(DEFAULT_SERVER_URL_KEY)
+}
+
+const writeDefaultServerUrl = (url: string | null) => {
+  // For file:// protocol, use in-memory storage
+  if (location.protocol === "file:") {
+    memoryServerUrl = url
+    return
+  }
+  setStorage(DEFAULT_SERVER_URL_KEY, url)
+}
 
 const notify: Platform["notify"] = async (title, description, href) => {
   if (!("Notification" in window)) return
@@ -111,12 +167,17 @@ const platform: Platform = {
   setDefaultServerUrl: writeDefaultServerUrl,
 }
 
+// Default server URL for Cordova/WebView - can be overridden at build time
+const CORDOVA_DEFAULT_SERVER = "http://192.168.31.110:4096"
+
 const defaultUrl = iife(() => {
   const lsDefault = readDefaultServerUrl()
   if (lsDefault) return lsDefault
   if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
   if (import.meta.env.DEV)
     return `http://${import.meta.env.VITE_OPENCODE_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_OPENCODE_SERVER_PORT ?? "4096"}`
+  // For file:// protocol (Cordova/WebView), use configured default
+  if (location.protocol === "file:") return CORDOVA_DEFAULT_SERVER
   return location.origin
 })
 
