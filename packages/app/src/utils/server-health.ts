@@ -10,9 +10,9 @@ interface CheckServerHealthOptions {
   retryDelayMs?: number
 }
 
-const defaultTimeoutMs = 3000
+const defaultTimeoutMs = 60000
 const defaultRetryCount = 2
-const defaultRetryDelayMs = 100
+const defaultRetryDelayMs = 1000
 
 function timeoutSignal(timeoutMs: number) {
   const timeout = (AbortSignal as unknown as { timeout?: (ms: number) => AbortSignal }).timeout
