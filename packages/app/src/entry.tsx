@@ -3,6 +3,7 @@
 import { iife } from "@opencode-ai/util/iife"
 import { render } from "solid-js/web"
 import { AppBaseProviders, AppInterface } from "@/app"
+import { HashRouter } from "@solidjs/router"
 import { type Platform, PlatformProvider } from "@/context/platform"
 import { dict as en } from "@/i18n/en"
 import { dict as zh } from "@/i18n/zh"
@@ -125,7 +126,7 @@ if (root instanceof HTMLElement) {
     () => (
       <PlatformProvider value={platform}>
         <AppBaseProviders>
-          <AppInterface defaultServer={ServerConnection.key(server)} servers={[server]} />
+          <AppInterface defaultServer={ServerConnection.key(server)} servers={[server]} router={HashRouter} />
         </AppBaseProviders>
       </PlatformProvider>
     ),
