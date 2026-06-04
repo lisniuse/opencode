@@ -2356,7 +2356,7 @@ export default function Layout(props: ParentProps) {
                 <main
                   classList={{
                     "size-full overflow-x-hidden flex flex-col items-start contain-strict": true,
-                    "border-l border-t border-border-weak-base bg-background-base rounded-tl-[12px]": codexLayout(),
+                    "border-l border-t border-border-weak-base bg-background-base rounded-l-[12px]": codexLayout(),
                     "bg-background-base": !codexLayout(),
                   }}
                 >

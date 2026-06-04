@@ -14,6 +14,10 @@
     opacity: 1;
   }
 
+  &[data-hide-indicator]::after {
+    display: none;
+  }
+
   &[data-direction="horizontal"] {
     inset-block: 0;
     inset-inline-end: 0;

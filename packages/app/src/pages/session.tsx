@@ -22,7 +22,6 @@ import { debounce } from "@solid-primitives/scheduled"
 import { useLocal } from "@/context/local"
 import { selectionFromLines, useFile, type FileSelection, type SelectedLineRange } from "@/context/file"
 import { createStore } from "solid-js/store"
-import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Select } from "@opencode-ai/ui/select"
 import { Tabs } from "@opencode-ai/ui/tabs"
 import { createAutoScroll } from "@opencode-ai/ui/hooks"
@@ -212,7 +211,6 @@ export default function Page() {
 
   const [ui, setUi] = createStore({
     pendingMessage: undefined as string | undefined,
-    reviewSnap: false,
     scrollGesture: 0,
     scroll: {
       overflow: false,
@@ -269,10 +267,23 @@ export default function Page() {
   const desktopReviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened() && !isV2NewSessionPage())
   const desktopFileTreeOpen = createMemo(() => isDesktop() && layout.fileTree.opened() && !isV2NewSessionPage())
   const desktopSidePanelOpen = createMemo(() => desktopReviewOpen() || desktopFileTreeOpen())
+  const sidePanelGap = createMemo(() =>
+    settings.general.newLayoutDesigns() && !settings.general.codexLayout() ? "8px" : "0px",
+  )
+  const reviewTreeWidth = createMemo(() => (desktopReviewOpen() && desktopFileTreeOpen() ? layout.fileTree.width() : 0))
+  const reviewPanelWidth = createMemo(() => `${layout.review.panelWidth()}px`)
+  const reviewSidePanelWidth = createMemo(() =>
+    reviewTreeWidth() > 0 ? `calc(${reviewPanelWidth()} + ${reviewTreeWidth()}px)` : reviewPanelWidth(),
+  )
   const sessionPanelWidth = createMemo(() => {
     if (!desktopSidePanelOpen()) return "100%"
-    if (desktopReviewOpen()) return `${layout.session.width()}px`
+    if (desktopReviewOpen()) return `calc(100% - ${reviewSidePanelWidth()} - ${sidePanelGap()})`
     return `calc(100% - ${layout.fileTree.width()}px)`
+  })
+  const sidePanelWidth = createMemo(() => {
+    if (!desktopSidePanelOpen()) return "0px"
+    if (desktopReviewOpen()) return reviewSidePanelWidth()
+    return `${layout.fileTree.width()}px`
   })
   const centered = createMemo(() => isDesktop() && !desktopReviewOpen())
 
@@ -411,26 +422,12 @@ export default function Page() {
     return key
   }, sessionKey())
 
-  let reviewFrame: number | undefined
   let refreshFrame: number | undefined
   let refreshTimer: number | undefined
   let todoFrame: number | undefined
   let todoTimer: number | undefined
   let diffFrame: number | undefined
   let diffTimer: number | undefined
-
-  createComputed((prev) => {
-    const open = desktopReviewOpen()
-    if (prev === undefined || prev === open) return open
-
-    if (reviewFrame !== undefined) cancelAnimationFrame(reviewFrame)
-    setUi("reviewSnap", true)
-    reviewFrame = requestAnimationFrame(() => {
-      reviewFrame = undefined
-      setUi("reviewSnap", false)
-    })
-    return open
-  }, desktopReviewOpen())
 
   const turnDiffs = createMemo(() => list(lastUserMessage()?.summary?.diffs))
   const nogit = createMemo(() => !!sync.project && sync.project.vcs !== "git")
@@ -1644,7 +1641,6 @@ export default function Page() {
   })
 
   onCleanup(() => {
-    if (reviewFrame !== undefined) cancelAnimationFrame(reviewFrame)
     if (refreshFrame !== undefined) cancelAnimationFrame(refreshFrame)
     if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
     if (todoFrame !== undefined) cancelAnimationFrame(todoFrame)
@@ -1748,8 +1744,8 @@ export default function Page() {
         <div
           classList={{
             "@container relative shrink-0 flex flex-col min-h-0 h-full bg-background-base flex-1 md:flex-none": true,
-            "duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
-              !size.active() && !ui.reviewSnap,
+            "duration-[320ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width] motion-reduce:transition-none":
+              !size.active(),
             "transition-[width]": !isV2NewSessionPage(),
             "rounded-[10px] shadow-[var(--v2-elevation-raised)]":
               settings.general.newLayoutDesigns() && !settings.general.codexLayout() && !!params.id,
@@ -1823,23 +1819,6 @@ export default function Page() {
 
           <Show when={params.id || !newSessionDesign()}>{composerRegion("dock")}</Show>
 
-          <Show when={desktopReviewOpen()}>
-            <div onPointerDown={() => size.start()}>
-              <ResizeHandle
-                classList={{
-                  "-right-1": settings.general.newLayoutDesigns(),
-                }}
-                direction="horizontal"
-                size={layout.session.width()}
-                min={450}
-                max={typeof window === "undefined" ? 1000 : window.innerWidth * 0.45}
-                onResize={(width) => {
-                  size.touch()
-                  layout.session.resize(width)
-                }}
-              />
-            </div>
-          </Show>
         </div>
 
         <SessionSidePanel
@@ -1852,8 +1831,8 @@ export default function Page() {
           reviewPanel={reviewPanel}
           activeDiff={tree.activeDiff}
           focusReviewDiff={focusReviewDiff}
-          reviewSnap={ui.reviewSnap}
           size={size}
+          width={sidePanelWidth}
         />
       </div>
 

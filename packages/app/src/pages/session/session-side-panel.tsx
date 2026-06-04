@@ -44,8 +44,8 @@ export function SessionSidePanel(props: {
   reviewPanel: () => JSX.Element
   activeDiff?: string
   focusReviewDiff: (path: string) => void
-  reviewSnap: boolean
   size: Sizing
+  width: () => string
 }) {
   const layout = useLayout()
   const platform = usePlatform()
@@ -67,7 +67,7 @@ export function SessionSidePanel(props: {
   const reviewTab = createMemo(() => isDesktop())
   const panelWidth = createMemo(() => {
     if (!open()) return "0px"
-    if (reviewOpen()) return "auto"
+    if (reviewOpen()) return props.width()
     return `${layout.fileTree.width()}px`
   })
   const treeWidth = createMemo(() => (fileOpen() ? `${layout.fileTree.width()}px` : "0px"))
@@ -212,10 +212,12 @@ export function SessionSidePanel(props: {
         class="relative min-w-0 h-full flex shrink-0 overflow-hidden bg-background-base"
         classList={{
           "pointer-events-none": !open(),
-          "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
-            !props.size.active() && !props.reviewSnap,
-          "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
-          "flex-1": reviewOpen(),
+          "transition-[width] duration-[320ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width] motion-reduce:transition-none":
+            !props.size.active(),
+          "border-l border-border-weaker-base":
+            open() && reviewOpen() && (!settings.general.newLayoutDesigns() || settings.general.codexLayout()),
+          "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden":
+            settings.general.newLayoutDesigns() && !settings.general.codexLayout(),
         }}
         style={{ width: panelWidth() }}
       >
@@ -223,9 +225,25 @@ export function SessionSidePanel(props: {
           <div
             class="size-full flex"
             classList={{
-              "border-l border-border-weaker-base": !settings.general.newLayoutDesigns(),
+              "border-l border-transparent": !settings.general.newLayoutDesigns(),
             }}
           >
+            <Show when={reviewOpen()}>
+              <div onPointerDown={() => props.size.start()}>
+                <ResizeHandle
+                  direction="horizontal"
+                  edge="start"
+                  data-hide-indicator
+                  size={layout.review.panelWidth()}
+                  min={360}
+                  max={960}
+                  onResize={(width) => {
+                    props.size.touch()
+                    layout.review.resizePanel(width)
+                  }}
+                />
+              </div>
+            </Show>
             <div
               aria-hidden={!reviewOpen()}
               inert={!reviewOpen()}
@@ -372,7 +390,7 @@ export function SessionSidePanel(props: {
                 class="relative min-w-0 h-full shrink-0 overflow-hidden"
                 classList={{
                   "pointer-events-none": !fileOpen(),
-                  "transition-[width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
+                  "transition-[width] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width] motion-reduce:transition-none":
                     !props.size.active(),
                 }}
                 style={{ width: treeWidth() }}

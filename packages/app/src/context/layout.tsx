@@ -19,6 +19,7 @@ export type { ProjectAvatarVariant }
 const AVATAR_COLOR_KEYS = ["pink", "mint", "orange", "purple", "cyan", "lime"] as const
 const DEFAULT_SIDEBAR_WIDTH = 344
 const DEFAULT_FILE_TREE_WIDTH = 200
+const DEFAULT_REVIEW_PANEL_WIDTH = 720
 const DEFAULT_SESSION_WIDTH = 600
 const DEFAULT_TERMINAL_HEIGHT = 280
 export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number]
@@ -258,6 +259,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         review: {
           diffStyle: "split" as ReviewDiffStyle,
           panelOpened: true,
+          panelWidth: DEFAULT_REVIEW_PANEL_WIDTH,
         },
         fileTree: {
           opened: false,
@@ -631,12 +633,20 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       },
       review: {
         diffStyle: createMemo(() => store.review?.diffStyle ?? "split"),
+        panelWidth: createMemo(() => store.review?.panelWidth ?? DEFAULT_REVIEW_PANEL_WIDTH),
         setDiffStyle(diffStyle: ReviewDiffStyle) {
           if (!store.review) {
-            setStore("review", { diffStyle, panelOpened: true })
+            setStore("review", { diffStyle, panelOpened: true, panelWidth: DEFAULT_REVIEW_PANEL_WIDTH })
             return
           }
           setStore("review", "diffStyle", diffStyle)
+        },
+        resizePanel(width: number) {
+          if (!store.review) {
+            setStore("review", { diffStyle: "split" as ReviewDiffStyle, panelOpened: true, panelWidth: width })
+            return
+          }
+          setStore("review", "panelWidth", width)
         },
       },
       fileTree: {
@@ -765,7 +775,11 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         function setReviewPanelOpened(next: boolean) {
           const current = store.review
           if (!current) {
-            setStore("review", { diffStyle: "split" as ReviewDiffStyle, panelOpened: next })
+            setStore("review", {
+              diffStyle: "split" as ReviewDiffStyle,
+              panelOpened: next,
+              panelWidth: DEFAULT_REVIEW_PANEL_WIDTH,
+            })
             return
           }
 
