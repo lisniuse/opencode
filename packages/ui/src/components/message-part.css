@@ -263,6 +263,10 @@
     margin: 12px 0;
   }
 
+  hr {
+    margin: 8px 0;
+  }
+
   pre {
     margin-top: 8px;
     margin-bottom: 14px;
