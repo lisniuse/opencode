@@ -70,12 +70,6 @@ function iconPath() {
   return join(iconsDir(), `icon.${ext}`)
 }
 
-function icon() {
-  const img = nativeImage.createFromPath(iconPath())
-  if (img.isEmpty()) return iconPath()
-  return img
-}
-
 function tone() {
   return nativeTheme.shouldUseDarkColors ? "dark" : "light"
 }
@@ -138,7 +132,7 @@ export function createMainWindow() {
     show: false,
     autoHideMenuBar: true,
     title: "OpenCode",
-    icon: icon(),
+    icon: iconPath(),
     backgroundColor: backgroundColor ?? defaultBackgroundColor(),
     ...(process.platform === "darwin"
       ? {
@@ -160,7 +154,6 @@ export function createMainWindow() {
       sandbox: true,
     },
   })
-  win.setIcon(icon())
 
   allowRendererPermissions(win)
   wireWindowRecovery(win, "main")
