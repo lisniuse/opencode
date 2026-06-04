@@ -238,29 +238,29 @@
   h6 {
     font-size: 13px;
     line-height: 19px;
-    margin-bottom: 8px;
+    margin-bottom: 18px;
   }
 
   p {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
 
   ul,
   ol {
-    margin-top: 4px;
-    margin-bottom: 8px;
+    margin-top: 6px;
+    margin-bottom: 10px;
   }
 
   li {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   li > p + p {
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
   blockquote {
-    margin: 12px 0;
+    margin: 18px 0;
   }
 
   hr {
@@ -268,8 +268,8 @@
   }
 
   pre {
-    margin-top: 8px;
-    margin-bottom: 14px;
+    margin-top: 10px;
+    margin-bottom: 24px;
   }
 
   .shiki {
