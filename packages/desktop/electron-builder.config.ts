@@ -25,6 +25,7 @@ const channel = (() => {
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
   return "dev"
 })()
+const productName = channel === "prod" ? "OpenCode" : `OpenCode ${channel.charAt(0).toUpperCase()}${channel.slice(1)}`
 
 const getBase = (): Configuration => ({
   artifactName: "opencode-desktop-${os}-${arch}.${ext}",
@@ -63,6 +64,7 @@ const getBase = (): Configuration => ({
   },
   win: {
     icon: `resources/icons/icon.ico`,
+    executableName: productName,
     signtoolOptions: {
       sign: signWindows,
     },
@@ -72,6 +74,9 @@ const getBase = (): Configuration => ({
   nsis: {
     oneClick: true,
     perMachine: false,
+    createDesktopShortcut: "always",
+    createStartMenuShortcut: true,
+    shortcutName: productName,
     installerIcon: `resources/icons/icon.ico`,
     installerHeaderIcon: `resources/icons/icon.ico`,
   },
@@ -90,7 +95,7 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop.dev",
-        productName: "OpenCode Dev",
+        productName,
         rpm: { packageName: "opencode-dev" },
       }
     }
@@ -98,7 +103,7 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop.beta",
-        productName: "OpenCode Beta",
+        productName,
         protocols: { name: "OpenCode Beta", schemes: ["opencode"] },
         publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
         rpm: { packageName: "opencode-beta" },
@@ -108,7 +113,7 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop",
-        productName: "OpenCode",
+        productName,
         protocols: { name: "OpenCode", schemes: ["opencode"] },
         publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
         rpm: { packageName: "opencode" },
