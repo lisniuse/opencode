@@ -126,6 +126,15 @@ const SessionRow = (props: {
         props.clearHoverProjectSoon()
       }}
     >
+      <span
+        classList={{
+          "text-13-regular min-w-0 flex-1 truncate": true,
+          "text-text-base": codex(),
+          "text-[#566274]": !codex(),
+        }}
+      >
+        {title()}
+      </span>
       <Show when={props.isWorking() || props.hasPermissions() || props.hasError() || props.unseenCount() > 0}>
         <div
           class="shrink-0 size-6 flex items-center justify-center"
@@ -147,15 +156,6 @@ const SessionRow = (props: {
           </Switch>
         </div>
       </Show>
-      <span
-        classList={{
-          "text-14-regular min-w-0 flex-1 truncate": true,
-          "text-text-base": codex(),
-          "text-[#566274]": !codex(),
-        }}
-      >
-        {title()}
-      </span>
     </A>
   )
 }
@@ -378,7 +378,7 @@ export const NewSessionItem = (props: {
         />
       </div>
       <span
-        class="text-14-regular min-w-0 flex-1 truncate text-text-base"
+        class="text-13-regular min-w-0 flex-1 truncate text-text-base"
       >
         {label}
       </span>

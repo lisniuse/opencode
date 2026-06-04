@@ -161,7 +161,7 @@ const ProjectTile = (props: {
             class="shrink-0 text-icon-base"
           />
           <span
-            class="min-w-0 flex-1 truncate text-14-regular text-text-base"
+            class="min-w-0 flex-1 truncate text-13-regular text-text-base"
           >
             {displayName(props.project)}
           </span>
