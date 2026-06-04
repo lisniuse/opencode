@@ -237,6 +237,7 @@
   h5,
   h6 {
     font-size: 13px;
+    font-weight: 600;
     line-height: 19px;
     margin-bottom: 18px;
   }
@@ -264,6 +265,8 @@
   }
 
   hr {
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border-weak-base) 70%, transparent);
     margin: 8px 0;
   }
 
