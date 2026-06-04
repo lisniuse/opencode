@@ -1,21 +1,28 @@
 import type { Session } from "@opencode-ai/sdk/v2/client"
 import { Avatar } from "@opencode-ai/ui/avatar"
+import { Button } from "@opencode-ai/ui/button"
+import { Dialog } from "@opencode-ai/ui/dialog"
+import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
 import { Icon } from "@opencode-ai/ui/icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Spinner } from "@opencode-ai/ui/spinner"
+import { TextField } from "@opencode-ai/ui/text-field"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { getFilename } from "@opencode-ai/core/util/path"
 import { A, useParams } from "@solidjs/router"
-import { type Accessor, createMemo, For, type JSX, Match, Show, Switch } from "solid-js"
+import { type Accessor, createMemo, createSignal, For, type JSX, Match, Show, Switch } from "solid-js"
 import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
-import { getAvatarColors, type LocalProject, useLayout } from "@/context/layout"
+import { getAvatarColors, type LocalProject } from "@/context/layout"
 import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
+import { useSettings } from "@/context/settings"
 import { messageAgentColor } from "@/utils/agent"
 import { sessionTitle } from "@/utils/session-title"
 import { sessionPermissionRequest } from "../session/composer/session-request-tree"
+import { SessionMenuItems } from "@/components/session/session-menu-items"
 import { childSessionOnPath, getProjectAvatarSource, hasProjectPermissions } from "./helpers"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
 
 export const ProjectIcon = (props: {
   project: LocalProject
@@ -81,9 +88,12 @@ export type SessionItemProps = {
   showChild?: boolean
   level?: number
   sidebarExpanded: Accessor<boolean>
+  sidebarOpened: Accessor<boolean>
   clearHoverProjectSoon: () => void
   prefetchSession: (session: Session, priority?: "high" | "low") => void
+  renameSession: (session: Session, title: string) => Promise<void>
   archiveSession: (session: Session) => Promise<void>
+  deleteSession: (session: Session) => void
 }
 
 const SessionRow = (props: {
@@ -101,6 +111,8 @@ const SessionRow = (props: {
   warmPress: () => void
   warmFocus: () => void
 }): JSX.Element => {
+  const settings = useSettings()
+  const codex = () => settings.general.codexLayout()
   const title = () => sessionTitle(props.session.title)
 
   return (
@@ -135,15 +147,26 @@ const SessionRow = (props: {
           </Switch>
         </div>
       </Show>
-      <span class="text-14-regular text-text-strong min-w-0 flex-1 truncate">{title()}</span>
+      <span
+        classList={{
+          "text-14-regular min-w-0 flex-1 truncate": true,
+          "text-text-base": codex(),
+          "text-[#566274]": !codex(),
+        }}
+      >
+        {title()}
+      </span>
     </A>
   )
 }
 
 export const SessionItem = (props: SessionItemProps): JSX.Element => {
   const params = useParams()
-  const layout = useLayout()
   const language = useLanguage()
+  const dialog = useDialog()
+  const settings = useSettings()
+  const codex = () => settings.general.codexLayout()
+  const [open, setOpen] = createSignal(false)
   const notification = useNotification()
   const permission = usePermission()
   const serverSync = useServerSync()
@@ -199,17 +222,59 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
       hasError={hasError}
       unseenCount={unseenCount}
       clearHoverProjectSoon={props.clearHoverProjectSoon}
-      sidebarOpened={layout.sidebar.opened}
+      sidebarOpened={props.sidebarOpened}
       warmPress={() => warm(2, "high")}
       warmFocus={() => warm(2, "high")}
     />
   )
 
+  function DialogRename() {
+    const [title, setTitle] = createSignal(sessionTitle(props.session.title))
+    const [saving, setSaving] = createSignal(false)
+    const rename = async () => {
+      if (saving()) return
+      setSaving(true)
+      await props.renameSession(props.session, title()).then(() => dialog.close())
+      setSaving(false)
+    }
+
+    return (
+      <Dialog title={language.t("common.rename")} size="small" fit>
+        <form
+          class="flex flex-col gap-6 p-6 pt-0"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void rename()
+          }}
+        >
+          <TextField
+            autofocus
+            label={language.t("common.rename")}
+            value={title()}
+            onChange={(value) => setTitle(value)}
+          />
+          <div class="flex justify-end gap-2">
+            <Button variant="ghost" size="large" type="button" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button variant="primary" size="large" type="submit" disabled={saving()}>
+              {language.t("common.rename")}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+    )
+  }
+
   return (
     <>
       <div
         data-session-id={props.session.id}
-        class="group/session relative w-full min-w-0 rounded-md cursor-default pr-3 transition-colors hover:bg-surface-raised-base-hover [&:has(:focus-visible)]:bg-surface-raised-base-hover has-[[data-expanded]]:bg-surface-raised-base-hover has-[.active]:bg-surface-base-active"
+        classList={{
+          "group/session relative w-full min-w-0 rounded-md cursor-default pr-3 transition-colors": true,
+          "hover:bg-surface-base-hover [&:has(:focus-visible)]:bg-surface-base-hover has-[[data-expanded]]:bg-surface-base-hover has-[.active]:bg-surface-base-active":
+            true,
+        }}
         style={{ "padding-left": `${8 + (props.level ?? 0) * 16}px` }}
       >
         <div class="flex min-w-0 items-center gap-1">
@@ -241,19 +306,34 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
                 "group-focus-within/session:w-6 group-focus-within/session:opacity-100 group-focus-within/session:pointer-events-auto": true,
               }}
             >
-              <Tooltip value={language.t("common.archive")} placement="top">
-                <IconButton
-                  icon="archive"
+              <DropdownMenu modal={!props.sidebarOpened()} open={open()} onOpenChange={setOpen}>
+                <DropdownMenu.Trigger
+                  as={IconButton}
+                  icon="dot-grid"
                   variant="ghost"
-                  class="size-6 rounded-md"
-                  aria-label={language.t("common.archive")}
+                  class="size-6 rounded-md data-[expanded]:bg-surface-base-active"
+                  aria-label={language.t("common.moreOptions")}
                   onClick={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    void props.archiveSession(props.session)
                   }}
                 />
-              </Tooltip>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content style={{ "min-width": "104px" }}>
+                    <SessionMenuItems
+                      onRename={() => {
+                        setOpen(false)
+                        dialog.show(() => <DialogRename />)
+                      }}
+                      onArchive={() => void props.archiveSession(props.session)}
+                      onDelete={() => {
+                        setOpen(false)
+                        setTimeout(() => props.deleteSession(props.session), 0)
+                      }}
+                    />
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu>
             </div>
           </Show>
         </div>
@@ -274,9 +354,9 @@ export const NewSessionItem = (props: {
   mobile?: boolean
   dense?: boolean
   sidebarExpanded: Accessor<boolean>
+  sidebarOpened: Accessor<boolean>
   clearHoverProjectSoon: () => void
 }): JSX.Element => {
-  const layout = useLayout()
   const language = useLanguage()
   const label = language.t("command.session.new")
   const tooltip = () => props.mobile || !props.sidebarExpanded()
@@ -286,19 +366,33 @@ export const NewSessionItem = (props: {
       end
       class={`flex items-center gap-2 min-w-0 w-full text-left focus:outline-none ${props.dense ? "py-0.5" : "py-1"}`}
       onClick={() => {
-        if (layout.sidebar.opened()) return
+        if (props.sidebarOpened()) return
         props.clearHoverProjectSoon()
       }}
     >
       <div class="shrink-0 size-6 flex items-center justify-center">
-        <Icon name="new-session" size="small" class="text-icon-weak" />
+        <Icon
+          name="new-session"
+          size="small"
+          class="text-icon-base"
+        />
       </div>
-      <span class="text-14-regular text-text-strong min-w-0 flex-1 truncate">{label}</span>
+      <span
+        class="text-14-regular min-w-0 flex-1 truncate text-text-base"
+      >
+        {label}
+      </span>
     </A>
   )
 
   return (
-    <div class="group/session relative w-full min-w-0 rounded-md cursor-default transition-colors pl-2 pr-3 hover:bg-surface-raised-base-hover [&:has(:focus-visible)]:bg-surface-raised-base-hover has-[.active]:bg-surface-base-active">
+    <div
+      classList={{
+        "group/session relative w-full min-w-0 rounded-md cursor-default transition-colors pl-2 pr-3": true,
+        "hover:bg-surface-base-hover [&:has(:focus-visible)]:bg-surface-base-hover has-[.active]:bg-surface-base-active":
+          true,
+      }}
+    >
       <Show
         when={!tooltip()}
         fallback={

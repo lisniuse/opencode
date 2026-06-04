@@ -74,7 +74,8 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
   const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
-  const useV2Titlebar = createMemo(() => settings.general.newLayoutDesigns())
+  const codexLayout = createMemo(() => settings.general.codexLayout())
+  const useV2Titlebar = createMemo(() => settings.general.newLayoutDesigns() && !codexLayout())
 
   const mac = createMemo(() => platform.platform === "desktop" && platform.os === "macos")
   const windows = createMemo(() => platform.platform === "desktop" && platform.os === "windows")
@@ -126,9 +127,9 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
     return {
       visible: version !== undefined || installing,
       installing,
-      label: "Update",
+      label: language.t("titlebar.update.label"),
       ariaLabel: language.t("toast.update.action.installRestart"),
-      title: version ? `Update ${version}` : undefined,
+      title: version ? language.t("titlebar.update.version", { version }) : undefined,
       onInstall: () => props.update?.install(),
     }
   })
@@ -221,8 +222,10 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
     <header
       classList={{
         "shrink-0 relative flex flex-row": true,
-        "h-9 bg-v2-background-bg-deep overflow-visible": useV2Titlebar(),
-        "h-10 bg-background-base overflow-hidden": !useV2Titlebar(),
+        "h-9 bg-surface-raised-base overflow-visible": useV2Titlebar() && codexLayout(),
+        "h-9 bg-v2-background-bg-deep overflow-visible": useV2Titlebar() && !codexLayout(),
+        "h-10 bg-surface-raised-base overflow-hidden": !useV2Titlebar() && codexLayout(),
+        "h-10 bg-background-base overflow-hidden": !useV2Titlebar() && !codexLayout(),
       }}
       style={{
         "min-height": minHeight(),
@@ -519,6 +522,7 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                     <NewSessionTabItem
                       href={`/${params.dir}/session`}
                       title={language.t("command.session.new")}
+                      closeLabel={language.t("common.closeTab")}
                       onClose={() => navigate(tabsEnriched().at(-1)?.href ?? "/")}
                     />
                   </Show>
@@ -543,23 +547,30 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                 "pl-2": !mac(),
               }}
             >
-              <Show when={windows() || linux()}>
+              <Show when={!codexLayout() && (windows() || linux())}>
                 <WindowsAppMenu command={command} platform={platform} />
               </Show>
               <Show when={mac()}>
                 {/*<div class="h-full shrink-0" style={{ width: `${72 / zoom()}px` }} />*/}
-                <div class="xl:hidden w-10 shrink-0 flex items-center justify-center">
-                  <IconButton
-                    icon="menu"
-                    variant="ghost"
-                    class="titlebar-icon rounded-md"
-                    onClick={layout.mobileSidebar.toggle}
-                    aria-label={language.t("sidebar.menu.toggle")}
-                    aria-expanded={layout.mobileSidebar.opened()}
-                  />
-                </div>
+                <Show
+                  when={codexLayout()}
+                  fallback={
+                    <div class="xl:hidden w-10 shrink-0 flex items-center justify-center">
+                      <IconButton
+                        icon="menu"
+                        variant="ghost"
+                        class="titlebar-icon rounded-md"
+                        onClick={layout.mobileSidebar.toggle}
+                        aria-label={language.t("sidebar.menu.toggle")}
+                        aria-expanded={layout.mobileSidebar.opened()}
+                      />
+                    </div>
+                  }
+                >
+                  <div class="w-10 shrink-0" />
+                </Show>
               </Show>
-              <Show when={!mac()}>
+              <Show when={!mac() && !codexLayout()}>
                 <div class="xl:hidden w-[48px] shrink-0 flex items-center justify-center">
                   <IconButton
                     icon="menu"
@@ -573,7 +584,7 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
               </Show>
               <div class="flex items-center gap-1 shrink-0">
                 <TooltipKeybind
-                  class={web() ? "hidden xl:flex shrink-0 ml-14" : "hidden xl:flex shrink-0 ml-2"}
+                  class={codexLayout() ? (web() ? "flex shrink-0 ml-14" : "flex shrink-0 ml-2") : web() ? "hidden xl:flex shrink-0 ml-14" : "hidden xl:flex shrink-0 ml-2"}
                   placement="bottom"
                   title={language.t("command.sidebar.toggle")}
                   keybind={command.keybind("sidebar.toggle")}
@@ -581,6 +592,9 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                   <Button
                     variant="ghost"
                     class="group/sidebar-toggle titlebar-icon w-8 h-6 p-0 box-border"
+                    classList={{
+                      "!bg-transparent hover:!bg-surface-base-active": codexLayout(),
+                    }}
                     onClick={layout.sidebar.toggle}
                     aria-label={language.t("command.sidebar.toggle")}
                     aria-expanded={layout.sidebar.opened()}
@@ -588,6 +602,9 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                     <Icon size="small" name={layout.sidebar.opened() ? "sidebar-active" : "sidebar"} />
                   </Button>
                 </TooltipKeybind>
+                <Show when={codexLayout()}>
+                  <div id="opencode-titlebar-search" class="flex items-center shrink-0" />
+                </Show>
                 <div class="hidden xl:flex items-center shrink-0">
                   <Show when={params.dir}>
                     <div
@@ -680,7 +697,9 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
             >
               <div id="opencode-titlebar-right" class="flex items-center gap-1 shrink-0 justify-end" />
               <Show when={windows()}>
-                {!tauriApi() && <div class="shrink-0" style={{ width: windowsControlsWidth() }} />}
+                <Show when={!codexLayout() && !tauriApi()}>
+                  <div class="shrink-0" style={{ width: windowsControlsWidth() }} />
+                </Show>
                 <div data-tauri-decorum-tb class="flex flex-row" />
               </Show>
             </div>
@@ -727,7 +746,7 @@ function TitlebarUpdateIconButton(props: { state: TitlebarUpdatePillState }) {
         aria-label={props.state.ariaLabel}
       >
         <span class="shrink-0 ml-[8px] mr-px text-[11px] text-v2-text-text-accent [font-weight:530] opacity-0 translate-x-2 motion-safe:transition-all duration-150 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 motion-reduce:translate-x-0">
-          Update
+          {props.state.label}
         </span>
         <span class="flex size-5 shrink-0 items-center justify-center">
           <Show
@@ -814,7 +833,7 @@ function ProjectTabAvatar(props: { project?: LocalProject; directory: string; se
   )
 }
 
-function NewSessionTabItem(props: { href: string; title: string; onClose: () => void }) {
+function NewSessionTabItem(props: { href: string; title: string; closeLabel: string; onClose: () => void }) {
   const closeTab = (event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
@@ -848,7 +867,7 @@ function NewSessionTabItem(props: { href: string; title: string; onClose: () => 
           }}
           onClick={closeTab}
           icon={<IconV2 name="xmark-small" />}
-          aria-label="Close tab"
+          aria-label={props.closeLabel}
         />
       </div>
     </div>

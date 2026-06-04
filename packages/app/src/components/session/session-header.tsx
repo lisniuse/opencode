@@ -156,6 +156,7 @@ export function SessionHeader() {
   const hotkey = createMemo(() => command.keybind("file.open"))
   const os = createMemo(() => detectOS(platform))
   const isDesktopV2 = createMemo(() => platform.platform === "desktop" && settings.general.newLayoutDesigns())
+  const codexLayout = createMemo(() => settings.general.codexLayout())
   const search = createMemo(() => (isDesktopV2() ? settings.general.showSearch() : true))
   const tree = createMemo(() => (isDesktopV2() ? settings.general.showFileTree() : true))
   const term = createMemo(() => (isDesktopV2() ? settings.general.showTerminal() : true))
@@ -236,10 +237,16 @@ export function SessionHeader() {
   const v2ActionsState = createMemo<SessionHeaderV2ActionsState>(() => ({
     statusVisible: status(),
     statusLabel: language.t("status.popover.trigger"),
+    terminalVisible: term(),
+    terminalLabel: language.t("command.terminal.toggle"),
+    terminalKeybind: command.keybind("terminal.toggle"),
+    terminalOpened: view().terminal.opened(),
+    onTerminalToggle: toggleTerminal,
     reviewLabel: language.t("command.review.toggle"),
     reviewKeybind: command.keybind("review.toggle"),
     reviewOpened: view().reviewPanel.opened(),
     onReviewToggle: () => view().reviewPanel.toggle(),
+    codex: codexLayout(),
   }))
 
   const selectApp = (app: OpenApp) => {
@@ -280,15 +287,37 @@ export function SessionHeader() {
   }
 
   const [centerMount, setCenterMount] = createSignal<HTMLElement | null>(null)
+  const [searchMount, setSearchMount] = createSignal<HTMLElement | null>(null)
   const [rightMount, setRightMount] = createSignal<HTMLElement | null>(null)
   onMount(() => {
     setCenterMount(document.getElementById("opencode-titlebar-center"))
+    setSearchMount(document.getElementById("opencode-titlebar-search"))
     setRightMount(document.getElementById("opencode-titlebar-right"))
   })
 
   return (
     <>
-      <Show when={search() && centerMount()}>
+      <Show when={search() && codexLayout() && searchMount()}>
+        {(mount) => (
+          <Portal mount={mount()}>
+            <TooltipKeybind
+              placement="bottom"
+              title={language.t("session.header.searchFiles")}
+              keybind={command.keybind("file.open")}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                icon="magnifying-glass"
+                class="titlebar-icon w-8 h-6 p-0 box-border !bg-transparent hover:!bg-surface-base-active"
+                onClick={() => command.trigger("file.open")}
+                aria-label={language.t("session.header.searchFiles")}
+              />
+            </TooltipKeybind>
+          </Portal>
+        )}
+      </Show>
+      <Show when={search() && !codexLayout() && centerMount()}>
         {(mount) => (
           <Portal mount={mount()}>
             <Button
@@ -322,7 +351,7 @@ export function SessionHeader() {
         {(mount) => (
           <Portal mount={mount()}>
             <Show
-              when={isDesktopV2}
+              when={isDesktopV2()}
               fallback={
                 <div class="flex items-center gap-2">
                   <Show when={projectDirectory()}>
@@ -522,10 +551,16 @@ export function SessionHeader() {
 type SessionHeaderV2ActionsState = {
   statusVisible: boolean
   statusLabel: string
+  terminalVisible: boolean
+  terminalLabel: string
+  terminalKeybind: string
+  terminalOpened: boolean
+  onTerminalToggle: () => void
   reviewLabel: string
   reviewKeybind: string
   reviewOpened: boolean
   onReviewToggle: () => void
+  codex: boolean
 }
 
 function SessionHeaderV2Actions(props: { state: SessionHeaderV2ActionsState }) {
@@ -535,6 +570,23 @@ function SessionHeaderV2Actions(props: { state: SessionHeaderV2ActionsState }) {
         <Tooltip placement="bottom" value={props.state.statusLabel}>
           <StatusPopoverV2 />
         </Tooltip>
+      </Show>
+      <Show when={props.state.terminalVisible}>
+        <TooltipKeybind title={props.state.terminalLabel} keybind={props.state.terminalKeybind}>
+          <Button
+            variant="ghost"
+            class="group/terminal-toggle titlebar-icon w-8 h-6 p-0 box-border shrink-0"
+            classList={{
+              "!bg-transparent hover:!bg-surface-base-active": props.state.codex,
+            }}
+            onClick={props.state.onTerminalToggle}
+            aria-label={props.state.terminalLabel}
+            aria-expanded={props.state.terminalOpened}
+            aria-controls="terminal-panel"
+          >
+            <Icon size="small" name={props.state.terminalOpened ? "terminal-active" : "terminal"} />
+          </Button>
+        </TooltipKeybind>
       </Show>
       <TooltipKeybind title={props.state.reviewLabel} keybind={props.state.reviewKeybind}>
         <IconButtonV2

@@ -103,8 +103,127 @@ export default function Home() {
   const settings = useSettings()
   return (
     <Show when={settings.general.newLayoutDesigns()} fallback={<LegacyHome />}>
-      <HomeDesign />
+      <Show when={settings.general.codexLayout()} fallback={<HomeDesign />}>
+        <HomeCodexDesign />
+      </Show>
     </Show>
+  )
+}
+
+function HomeCodexDesign() {
+  const sync = useServerSync()
+  const layout = useLayout()
+  const navigate = useNavigate()
+  const server = useServer()
+  const language = useLanguage()
+  const [state, setState] = createStore({
+    search: "",
+    searchFocused: false,
+  })
+
+  const projects = createMemo(() => layout.projects.list())
+  const dirs = (project: LocalProject) => [project.worktree, ...(project.sandboxes ?? [])]
+  const directories = createMemo(() => projects().flatMap(dirs))
+  const search = createMemo(() => state.search.trim())
+  const load = useQuery(() => ({
+    queryKey: ["home", "codex", "sessions", ...directories()] as const,
+    queryFn: async () => {
+      await Promise.all(directories().map((dir) => sync.project.loadSessions(dir)))
+      return null
+    },
+  }))
+  const map = createMemo(
+    () => new Map(projects().flatMap((project) => (project.id ? [[project.id, project] as const] : []))),
+  )
+  const all = createMemo(() =>
+    buildHomeSessionRecords({
+      sync,
+      projectDirectories: directories,
+      projects,
+      projectByID: map,
+    }),
+  )
+  const records = createMemo(() => all().slice(0, HOME_SESSION_LIMIT))
+  const results = createMemo(() => {
+    const query = search().toLowerCase()
+    if (!query) return []
+    return all().filter((record) => matchesHomeSessionSearch(record, query))
+  })
+  const open = createMemo(() => state.searchFocused && search().length > 0)
+  const groups = createMemo(() => groupSessions(records(), language))
+
+  function close() {
+    setState("search", "")
+    setState("searchFocused", false)
+  }
+
+  function openSession(session: Session) {
+    const project = projectForSession(session, projects(), map())
+    layout.projects.open(project?.worktree ?? session.directory)
+    server.projects.touch(project?.worktree ?? session.directory)
+    navigate(`/${base64Encode(session.directory)}/session/${session.id}`)
+  }
+
+  return (
+    <div class="flex size-full min-w-0 flex-col bg-background-base">
+      <div class="mx-auto flex h-full w-full max-w-[760px] min-w-0 flex-col px-8 pb-12 pt-12">
+        <Show
+          when={projects().length > 0}
+          fallback={
+            <div class="flex min-h-0 flex-1 items-center justify-center">
+              <div class="flex max-w-[320px] flex-col items-center gap-2 text-center">
+                <div class="text-14-medium text-text-base">{language.t("sidebar.empty.title")}</div>
+                <div class="text-13-regular text-text-weak">{language.t("sidebar.empty.description")}</div>
+              </div>
+            </div>
+          }
+        >
+          <HomeSessionSearch
+            value={state.search}
+            placeholder={language.t("home.sessions.search.placeholder")}
+            open={open()}
+            loading={load.isLoading}
+            results={results()}
+            noResultsLabel={language.t("home.sessions.search.noResults", { query: search() })}
+            bindFocus={() => {}}
+            onInput={(value) => setState("search", value)}
+            onFocus={() => setState("searchFocused", true)}
+            onClose={close}
+            onSelect={(session) => {
+              openSession(session)
+              close()
+            }}
+          />
+          <div class="mt-3 min-h-0 flex-1 overflow-y-auto">
+            <div class="flex flex-col gap-6 pt-3">
+              <Show when={!load.isLoading} fallback={<HomeSessionSkeleton label={language.t("common.loading")} />}>
+                <Show
+                  when={groups().length > 0}
+                  fallback={
+                    <div class="flex min-w-0 flex-col gap-4">
+                      <HomeSessionGroupHeader title={language.t("home.sessions.empty")} />
+                    </div>
+                  }
+                >
+                  <For each={groups()}>
+                    {(group) => (
+                      <div class="flex min-w-0 flex-col gap-4">
+                        <HomeSessionGroupHeader title={group.title} />
+                        <div class="flex min-w-0 flex-col gap-px">
+                          <For each={group.sessions}>
+                            {(record) => <HomeSessionRow record={record} openSession={openSession} />}
+                          </For>
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </Show>
+              </Show>
+            </div>
+          </div>
+        </Show>
+      </div>
+    </div>
   )
 }
 

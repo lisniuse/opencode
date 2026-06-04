@@ -36,10 +36,13 @@ export type WorkspaceSidebarContext = {
   currentDir: Accessor<string>
   navList: Accessor<Session[]>
   sidebarExpanded: Accessor<boolean>
+  sidebarOpened: Accessor<boolean>
   sidebarHovering: Accessor<boolean>
   clearHoverProjectSoon: () => void
   prefetchSession: (session: Session, priority?: "high" | "low") => void
+  renameSession: (session: Session, title: string) => Promise<void>
   archiveSession: (session: Session) => Promise<void>
+  deleteSession: (session: Session) => void
   workspaceName: (directory: string, projectId?: string, branch?: string) => string | undefined
   renameWorkspace: (directory: string, next: string, projectId?: string, branch?: string) => void
   editorOpen: (id: string) => boolean
@@ -250,6 +253,7 @@ const WorkspaceSessionList = (props: {
         slug={props.slug()}
         mobile={props.mobile}
         sidebarExpanded={props.ctx.sidebarExpanded}
+        sidebarOpened={props.ctx.sidebarOpened}
         clearHoverProjectSoon={props.ctx.clearHoverProjectSoon}
       />
     </Show>
@@ -266,9 +270,12 @@ const WorkspaceSessionList = (props: {
           mobile={props.mobile}
           showChild
           sidebarExpanded={props.ctx.sidebarExpanded}
+          sidebarOpened={props.ctx.sidebarOpened}
           clearHoverProjectSoon={props.ctx.clearHoverProjectSoon}
           prefetchSession={props.ctx.prefetchSession}
+          renameSession={props.ctx.renameSession}
           archiveSession={props.ctx.archiveSession}
+          deleteSession={props.ctx.deleteSession}
         />
       )}
     </For>
@@ -467,7 +474,7 @@ export const LocalWorkspace = (props: {
   return (
     <div
       ref={(el) => props.ctx.setScrollContainerRef(el, props.mobile)}
-      class="size-full flex flex-col py-2 overflow-y-auto no-scrollbar [overflow-anchor:none]"
+      class="w-full flex flex-col py-1 [overflow-anchor:none]"
     >
       <WorkspaceSessionList
         slug={slug}

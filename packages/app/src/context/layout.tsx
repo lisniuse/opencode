@@ -249,6 +249,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           width: DEFAULT_SIDEBAR_WIDTH,
           workspaces: {} as Record<string, boolean>,
           workspacesDefault: false,
+          pinned: {} as Record<string, boolean>,
         },
         terminal: {
           height: DEFAULT_TERMINAL_HEIGHT,
@@ -578,6 +579,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
         close(directory: string) {
           server.projects.close(directory)
+          setStore("sidebar", "pinned", directory, false)
         },
         expand(directory: string) {
           server.projects.expand(directory)
@@ -606,6 +608,12 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
         workspaces(directory: string) {
           return () => store.sidebar.workspaces[directory] ?? store.sidebar.workspacesDefault ?? false
+        },
+        pinned(directory: string) {
+          return () => store.sidebar.pinned?.[directory] ?? false
+        },
+        setPinned(directory: string, value: boolean) {
+          setStore("sidebar", "pinned", directory, value)
         },
         setWorkspaces(directory: string, value: boolean) {
           setStore("sidebar", "workspaces", directory, value)

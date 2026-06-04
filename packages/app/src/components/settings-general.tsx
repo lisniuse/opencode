@@ -25,6 +25,7 @@ import {
   terminalDefault,
   terminalFontFamily,
   terminalInput,
+  type LayoutDesign,
   useSettings,
 } from "@/context/settings"
 import { decode64 } from "@/utils/base64"
@@ -52,6 +53,11 @@ type ShellOption = {
 type ShellSelectOption = {
   id: string
   value: string
+  label: string
+}
+
+type LayoutOption = {
+  value: LayoutDesign
   label: string
 }
 
@@ -266,6 +272,11 @@ export const SettingsGeneral: Component = () => {
       label: language.label(locale),
     })),
   )
+  const layoutOptions = createMemo<LayoutOption[]>(() => [
+    { value: "classic", label: language.t("settings.general.row.layoutDesign.option.classic") },
+    { value: "modern", label: language.t("settings.general.row.layoutDesign.option.modern") },
+    { value: "codex", label: language.t("settings.general.row.layoutDesign.option.codex") },
+  ])
 
   const noneSound = { id: "none", label: "sound.option.none" } as const
   const soundOptions = [noneSound, ...SOUND_OPTIONS]
@@ -403,19 +414,27 @@ export const SettingsGeneral: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.general.row.newLayoutDesigns.title")}
-          description={language.t("settings.general.row.newLayoutDesigns.description")}
+          title={language.t("settings.general.row.layoutDesign.title")}
+          description={language.t("settings.general.row.layoutDesign.description")}
         >
           <div data-action="settings-new-layout-designs">
-            <Switch
-              checked={settings.general.newLayoutDesigns()}
-              onChange={(checked) => {
-                settings.general.setNewLayoutDesigns(checked)
-                if (!checked) return
+            <Select
+              options={layoutOptions()}
+              current={layoutOptions().find((o) => o.value === settings.general.layoutDesign())}
+              value={(o) => o.value}
+              label={(o) => o.label}
+              onSelect={(option) => {
+                if (!option) return
+                settings.general.setLayoutDesign(option.value)
+                if (option.value === "classic") return
                 void import("@/components/settings-v2").then((module) => {
                   dialog.show(() => <module.DialogSettings />)
                 })
               }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              triggerStyle={{ "min-width": "180px" }}
             />
           </div>
         </SettingsRow>

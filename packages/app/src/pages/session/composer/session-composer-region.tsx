@@ -6,6 +6,7 @@ import { useLayout } from "@/context/layout"
 import { PromptInput } from "@/components/prompt-input"
 import { useLanguage } from "@/context/language"
 import { usePrompt } from "@/context/prompt"
+import { useSettings } from "@/context/settings"
 import { useSync } from "@/context/sync"
 import { getSessionHandoff, setSessionHandoff } from "@/pages/session/handoff"
 import { useSessionKey } from "@/pages/session/session-layout"
@@ -52,9 +53,11 @@ export function SessionComposerRegion(props: {
   const layout = useLayout()
   const prompt = usePrompt()
   const language = useLanguage()
+  const settings = useSettings()
   const route = useSessionKey()
   const sync = useSync()
   const view = layout.view(route.sessionKey)
+  const fixed = createMemo(() => props.centered && settings.general.codexLayout())
 
   const handoffPrompt = createMemo(() => getSessionHandoff(route.sessionKey())?.prompt)
   const info = createMemo(() => (route.params.id ? sync.session.get(route.params.id) : undefined))
@@ -154,7 +157,11 @@ export function SessionComposerRegion(props: {
           "w-full pointer-events-auto": true,
           "px-3": props.placement !== "inline",
           [NEW_SESSION_CONTENT_WIDTH]: props.placement === "inline",
-          "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered,
+          "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered && !settings.general.codexLayout(),
+          "mx-auto": fixed(),
+        }}
+        style={{
+          "max-width": fixed() ? "760px" : undefined,
         }}
       >
         <Show when={props.state.questionRequest()} keyed>

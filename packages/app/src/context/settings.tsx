@@ -18,6 +18,8 @@ export interface SoundSettings {
   errors: string
 }
 
+export type LayoutDesign = "classic" | "modern" | "codex"
+
 export interface Settings {
   general: {
     autoSave: boolean
@@ -33,6 +35,7 @@ export interface Settings {
     editToolPartsExpanded: boolean
     showSessionProgressBar: boolean
     showCustomAgents: boolean
+    layoutDesign?: LayoutDesign
     newLayoutDesigns?: boolean
   }
   updates: {
@@ -56,6 +59,7 @@ export const monoDefault = "System Mono"
 export const sansDefault = "System Sans"
 export const terminalDefault = "JetBrainsMono Nerd Font Mono"
 export const newLayoutDesignsDefault = import.meta.env.VITE_OPENCODE_CHANNEL !== "prod"
+export const layoutDesignDefault: LayoutDesign = newLayoutDesignsDefault ? "modern" : "classic"
 
 const monoFallback =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
@@ -154,6 +158,11 @@ function withFallback<T>(read: () => T | undefined, fallback: T) {
   return createMemo(() => read() ?? fallback)
 }
 
+function design(value: unknown, fallback: LayoutDesign): LayoutDesign {
+  if (value === "classic" || value === "modern" || value === "codex") return value
+  return fallback
+}
+
 export const { use: useSettings, provider: SettingsProvider } = createSimpleContext({
   name: "Settings",
   init: () => {
@@ -248,8 +257,31 @@ export const { use: useSettings, provider: SettingsProvider } = createSimpleCont
         setShowCustomAgents(value: boolean) {
           setStore("general", "showCustomAgents", value)
         },
-        newLayoutDesigns: withFallback(() => store.general?.newLayoutDesigns, newLayoutDesignsDefault),
+        layoutDesign: createMemo(() =>
+          design(
+            store.general?.layoutDesign,
+            (store.general?.newLayoutDesigns ?? newLayoutDesignsDefault) ? "modern" : "classic",
+          ),
+        ),
+        setLayoutDesign(value: LayoutDesign) {
+          setStore("general", "layoutDesign", value)
+          setStore("general", "newLayoutDesigns", value !== "classic")
+        },
+        codexLayout: createMemo(() =>
+          design(
+            store.general?.layoutDesign,
+            (store.general?.newLayoutDesigns ?? newLayoutDesignsDefault) ? "modern" : "classic",
+          ) === "codex",
+        ),
+        newLayoutDesigns: createMemo(
+          () =>
+            design(
+              store.general?.layoutDesign,
+              (store.general?.newLayoutDesigns ?? newLayoutDesignsDefault) ? "modern" : "classic",
+            ) !== "classic",
+        ),
         setNewLayoutDesigns(value: boolean) {
+          setStore("general", "layoutDesign", value ? "modern" : "classic")
           setStore("general", "newLayoutDesigns", value)
         },
       },

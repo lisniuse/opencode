@@ -56,6 +56,7 @@ import { normalize } from "@opencode-ai/ui/session-diff"
 import { useFileComponent } from "@opencode-ai/ui/context/file"
 import { shouldMarkBoundaryGesture, normalizeWheelDelta } from "@/pages/session/message-gesture"
 import { SessionContextUsage } from "@/components/session-context-usage"
+import { SessionMenuItems } from "@/components/session/session-menu-items"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { useLanguage } from "@/context/language"
@@ -294,6 +295,7 @@ export function MessageTimeline(props: {
   const language = useLanguage()
   const { params, sessionKey } = useSessionKey()
   const platform = usePlatform()
+  const fixed = createMemo(() => props.centered && settings.general.codexLayout())
 
   let virtualizer: VirtualizerHandle | undefined
   const sessionID = createMemo(() => params.id)
@@ -1092,11 +1094,15 @@ export function MessageTimeline(props: {
         data-message-id={input.row().userMessageID}
         data-timeline-row={input.row()._tag}
         classList={{
-          "min-w-0 w-full max-w-full": true,
-          "md:max-w-200 2xl:max-w-[1000px]": props.centered,
-          "md:mx-auto": props.centered,
+          "min-w-0 w-full": true,
+          "md:max-w-200 2xl:max-w-[1000px]": props.centered && !settings.general.codexLayout(),
+          "md:mx-auto": props.centered && !settings.general.codexLayout(),
+          "mx-auto": fixed(),
           "pt-6": previousUserMessage(),
           "pt-3": previousAssistantPart(),
+        }}
+        style={{
+          "max-width": fixed() ? "760px" : undefined,
         }}
       >
         <div data-component="session-turn" class="min-w-0 w-full relative" style={{ height: "auto" }}>
@@ -1256,7 +1262,7 @@ export function MessageTimeline(props: {
   }
 
   return (
-    <div class="relative w-full h-full min-w-0">
+    <div class="relative w-full h-full min-w-0" data-layout={settings.general.codexLayout() ? "codex" : undefined}>
       <div
         class="absolute left-1/2 -translate-x-1/2 bottom-6 z-[60] pointer-events-none transition-all duration-200 ease-out"
         classList={{
@@ -1306,7 +1312,7 @@ export function MessageTimeline(props: {
               "w-full": true,
               "pb-4": true,
               "pl-2 pr-3 md:pl-4 md:pr-3": true,
-              "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered,
+              "md:max-w-200 md:mx-auto 2xl:max-w-[1000px]": props.centered && !settings.general.codexLayout(),
             }}
           >
             <Show when={workingStatus() !== "hidden" && settings.general.showSessionProgressBar()}>
@@ -1445,34 +1451,21 @@ export function MessageTimeline(props: {
                               }
                             }}
                           >
-                            <DropdownMenu.Item
-                              onSelect={() => {
+                            <SessionMenuItems
+                              onRename={() => {
                                 setTitle("pendingRename", true)
                                 setTitle("menuOpen", false)
                               }}
-                            >
-                              <DropdownMenu.ItemLabel>{language.t("common.rename")}</DropdownMenu.ItemLabel>
-                            </DropdownMenu.Item>
-                            <Show when={shareEnabled()}>
-                              <DropdownMenu.Item
-                                onSelect={() => {
-                                  setTitle({ pendingShare: true, menuOpen: false })
-                                }}
-                              >
-                                <DropdownMenu.ItemLabel>
-                                  {language.t("session.share.action.share")}
-                                </DropdownMenu.ItemLabel>
-                              </DropdownMenu.Item>
-                            </Show>
-                            <DropdownMenu.Item onSelect={() => void archiveSession(id)}>
-                              <DropdownMenu.ItemLabel>{language.t("common.archive")}</DropdownMenu.ItemLabel>
-                            </DropdownMenu.Item>
-                            <DropdownMenu.Separator />
-                            <DropdownMenu.Item
-                              onSelect={() => dialog.show(() => <DialogDeleteSession sessionID={id} />)}
-                            >
-                              <DropdownMenu.ItemLabel>{language.t("common.delete")}</DropdownMenu.ItemLabel>
-                            </DropdownMenu.Item>
+                              onShare={
+                                shareEnabled()
+                                  ? () => {
+                                      setTitle({ pendingShare: true, menuOpen: false })
+                                    }
+                                  : undefined
+                              }
+                              onArchive={() => void archiveSession(id)}
+                              onDelete={() => dialog.show(() => <DialogDeleteSession sessionID={id} />)}
+                            />
                           </DropdownMenu.Content>
                         </DropdownMenu.Portal>
                       </DropdownMenu>

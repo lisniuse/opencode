@@ -1018,7 +1018,11 @@ export default function Page() {
   )
 
   const reviewPanel = () => (
-    <div class="flex flex-col h-full overflow-hidden bg-background-stronger contain-strict">
+    <div
+      classList={{
+        "flex flex-col h-full overflow-hidden contain-strict bg-background-base": true,
+      }}
+    >
       <div class="relative pt-2 flex-1 min-h-0 overflow-hidden">
         {reviewContent({
           diffStyle: layout.review.diffStyle(),
@@ -1713,7 +1717,7 @@ export default function Page() {
       <div
         class="flex-1 min-h-0 flex flex-col md:flex-row "
         classList={{
-          "gap-2 p-2": settings.general.newLayoutDesigns(),
+          "gap-2 p-2": settings.general.newLayoutDesigns() && !settings.general.codexLayout(),
         }}
       >
         <Show when={!isDesktop() && !!params.id}>
@@ -1743,11 +1747,12 @@ export default function Page() {
 
         <div
           classList={{
-            "@container relative shrink-0 flex flex-col min-h-0 h-full bg-background-stronger flex-1 md:flex-none": true,
+            "@container relative shrink-0 flex flex-col min-h-0 h-full bg-background-base flex-1 md:flex-none": true,
             "duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
               !size.active() && !ui.reviewSnap,
             "transition-[width]": !isV2NewSessionPage(),
-            "rounded-[10px] shadow-[var(--v2-elevation-raised)]": settings.general.newLayoutDesigns() && !!params.id,
+            "rounded-[10px] shadow-[var(--v2-elevation-raised)]":
+              settings.general.newLayoutDesigns() && !settings.general.codexLayout() && !!params.id,
           }}
           style={{
             width: sessionPanelWidth(),
@@ -1756,7 +1761,7 @@ export default function Page() {
           <div
             class="flex-1 min-h-0 overflow-hidden"
             classList={{
-              "rounded-[10px]": settings.general.newLayoutDesigns(),
+              "rounded-[10px]": settings.general.newLayoutDesigns() && !settings.general.codexLayout(),
             }}
           >
             <Switch>

@@ -207,6 +207,92 @@
   }
 }
 
+[data-layout="codex"] [data-component="user-message"] {
+  font-size: 14px;
+  line-height: 20px;
+  color: #1f2328;
+
+  [data-slot="user-message-body"] {
+    max-width: min(72%, 520px);
+  }
+
+  [data-slot="user-message-text"] {
+    background: #f4f4f4;
+    border: 0;
+    border-radius: 14px;
+    box-shadow: none;
+    color: #1f2328;
+    padding: 7px 12px;
+  }
+}
+
+[data-layout="codex"] [data-component="text-part"] [data-component="markdown"] {
+  font-size: 13px;
+  line-height: 19px;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: 13px;
+    line-height: 19px;
+    margin-bottom: 18px;
+  }
+
+  p {
+    margin-bottom: 10px;
+  }
+
+  ul,
+  ol {
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+
+  li {
+    margin-bottom: 6px;
+  }
+
+  li > p + p {
+    margin-top: 6px;
+  }
+
+  blockquote {
+    margin: 18px 0;
+  }
+
+  pre {
+    margin-top: 10px;
+    margin-bottom: 24px;
+  }
+
+  .shiki {
+    font-size: 12px;
+  }
+
+  table {
+    font-size: 13px;
+  }
+
+  th,
+  td {
+    padding: 9px 10px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="codex"] [data-layout="codex"] [data-component="user-message"] {
+    color: #eef2f7;
+
+    [data-slot="user-message-text"] {
+      background: #242933;
+      color: #eef2f7;
+    }
+  }
+}
+
 [data-component="text-part"] {
   width: 100%;
   margin-top: 24px;
